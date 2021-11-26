@@ -1,0 +1,109 @@
+End Sub
+Sub Query()
+Dim url As String
+Dim i As Integer, n As Integer, currency1 As String, currency2 As String, conv1 As Variant, conv2 As Variant, inicio As Integer
+Dim tWB As Workbook
+
+Set tWB = ThisWorkbook
+
+
+
+Application.ScreenUpdating = False
+
+Sheets("Query").Visible = True
+Sheets("Query").Select
+
+    url = "URL;https://www.xe.com/currencytables/?from=USD&date=" & UserForm1.TextBox1
+    With Worksheets("Query").QueryTables.Add(Connection:=url, Destination:=Worksheets("Query").Range("A1"))
+        .Name = "My Query"
+        .RowNumbers = False
+        .FillAdjacentFormulas = False
+        .PreserveFormatting = True
+        .RefreshOnFileOpen = False
+        .BackgroundQuery = False
+        .RefreshStyle = xlOverwriteCells
+        .SavePassword = False
+        .SaveData = True
+        .AdjustColumnWidth = True
+        .RefreshPeriod = 0
+        .WebSelectionType = xlEntirePage
+        .WebFormatting = xlWebFormattingNone
+        .WebPreFormattedTextToColumns = True
+        .WebConsecutiveDelimitersAsOne = True
+        .WebSingleBlockTextImport = False
+        .WebDisableDateRecognition = False
+        .WebDisableRedirections = False
+        .Refresh BackgroundQuery:=False
+    End With
+
+n = WorksheetFunction.CountA(Columns("A:A"))
+currency1 = Left(UserForm1.curr1, 3)
+
+
+currency2 = Left(UserForm1.curr2, 3)
+On Error GoTo aviso
+For i = 50 To n
+    If Sheets("Query").Range("B" & i) = "Name" Then
+        inicio = i
+        Exit For
+    End If
+Next i
+
+For i = inicio To n
+    
+    If tWB.Sheets("Query").Range("A" & i) = currency1 Then
+        
+        conv1 = Sheets("Query").Range("D" & i)
+        Exit For
+    End If
+        
+Next i
+
+For i = inicio To n
+    
+    If Sheets("Query").Range("A" & i) = currency2 Then
+        
+        conv2 = Sheets("Query").Range("C" & i)
+        Exit For
+    End If
+Next i
+Sheets("Query").Visible = False
+
+UserForm1.amount2 = UserForm1.amount1 * conv1 * conv2
+Exit Sub
+
+aviso:
+MsgBox ("The selected date doesnt have the currencies data yet")
+
+
+End Sub
+
+Sub Plot30()
+
+Dim CurrentDate As String, i As Integer, valor() As String, strnum As String
+Sheets("Plot").Visible = True
+Sheets("Plot").Select
+
+Application.ScreenUpdating = False
+
+Sheets("Plot").Range("A30").Activate
+
+CurrentDate = UserForm1.TextBox1
+
+For i = 30 To 1 Step -1
+    Sheets("Plot").Range("A" & 30 - i + 1) = DateAdd("d", -i + 1, CurrentDate)
+Next i
+
+For i = 1 To 30
+    UserForm1.TextBox1 = Format(Sheets("Plot").Range("A" & i), "yyyy-mm-dd")
+    Call Query
+    strnum = CStr(UserForm1.amount2)
+    valor = Split(strnum, ",")
+    
+    Sheets("Plot").Range("B" & i) = valor(0) & "." & valor(1)
+Next i
+
+Sheets("Plot").Visible = False
+Sheets("Plot 30 days").Visible = True
+
+End Sub
