@@ -1,0 +1,41 @@
+Private Sub CommandButton1_Click()
+Dim rowind As Integer, colind As Integer
+
+rowind = SearchTool.ComboBox1.ListIndex
+colind = SearchTool.ComboBox2.ListIndex
+
+    ans = InputBox("Type the new data")
+    
+Cells(rowind + 2, colind + 2) = ans
+
+End Sub
+
+Private Sub CommandButton2_Click()
+Unload SearchTool
+End Sub
+
+Private Sub CommandButton3_Click()
+Dim rowind As Integer, colind As Integer, ans As Integer
+
+rowind = SearchTool.ComboBox1.ListIndex
+colind = SearchTool.ComboBox2.ListIndex
+
+SearchTool.Label3 = Cells(1, colind + 2)
+
+If Cells(rowind + 2, colind + 2) <> "" Then
+    SearchTool.TextBox1 = Cells(rowind + 2, colind + 2)
+Else
+    ans = MsgBox("The is no data. Do you want to add?", vbYesNo)
+    If ans = 6 Then
+        Cells(rowind + 2, colind + 2) = InputBox("Enter new data to the " & SearchTool.Label3 & " field")
+        SearchTool.TextBox1 = Cells(rowind + 2, colind + 2)
+    Else
+        Exit Sub
+    End If
+End If
+
+End Sub
+
+Private Sub Label3_Click()
+
+End Sub
