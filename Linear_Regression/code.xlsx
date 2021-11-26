@@ -1,0 +1,343 @@
+Private Sub GoButton_Click()
+Dim tWB As Workbook, Ans As Integer, fx1() As Double, fx2() As Double, fx3() As Double, fx4() As Double
+Dim f1() As Double, f2() As Double, f3() As Double, f4() As Double
+Dim flag1 As Boolean, flag2 As Boolean, flag3 As Boolean, flag4 As Boolean
+Dim Xt As Variant, XtX As Variant, Xty As Variant, Betaa As Variant, yp As Variant, Betaat As Variant
+Dim UserXRange As Range, UserYRange As Range, cc As Integer, n As Integer, i As Integer, j As Integer, savior As Integer
+Dim xdata() As Double, ydata() As Double, y() As Double, x() As Variant, residual() As Double, somaresidual As Double, SST As Double, R2 As Double
+On Error GoTo here:
+    If UserForm1.fxn1.Text = "" And UserForm1.fxn2.Text = "" And UserForm1.fxn3.Text = "" And UserForm1.fxn4.Text = "" Then
+        MsgBox ("The fields must not be blank")
+        Exit Sub
+    End If
+    
+'    If UserForm1.fxn1.Text = "" Then
+'        MsgBox ("Please enter the equations in order: 1 to 4. The first must be present")
+'        Exit Sub
+'    End If
+'
+'    If UserForm1.fxn2.Text = "" And (UserForm1.fxn3.Text <> "" Or UserForm1.fxn4.Text <> "") Then
+'        MsgBox ("Please enter the equations in order: 1 to 4.")
+'        Exit Sub
+'    End If
+'
+'    If UserForm1.fxn3.Text = "" And (UserForm1.fxn4.Text <> "") Then
+'        MsgBox ("Please enter the equations in order: 1 to 4.")
+'        Exit Sub
+'    End If
+    
+    
+    
+    'PLACE YOUR ADDITIONAL DIM STATEMENTS IN THIS REGION
+    Set tWB = ThisWorkbook
+    tWB.Activate
+    'THE FOLLOWING TWO LINES JUST SETS A DEFAULT RANGE IN THE INPUT BOXES, THAT'S ALL
+    Set UserXRange = Application.InputBox("X Input Range", "X Input", "Sheet1!$A$1:$A$10", Type:=8)
+    Set UserYRange = Application.InputBox("Y Input Range", "Y Input", "Sheet1!$B$1:$B$10", Type:=8)
+    
+    'PLACE THE MAIN BULK OF YOUR CODE IN THIS REGION!
+    
+    
+    n = WorksheetFunction.CountA(Columns("A:A"))
+    cc = 0
+    ReDim fx1(n) As Double, fx2(n) As Double, fx3(n) As Double, fx4(n) As Double, y(n, 1) As Double, xdata(n, 1) As Double, residual(n, 1) As Double
+    ReDim f1(n) As Double, f2(n) As Double, f3(n) As Double, f4(n) As Double
+    
+    For i = 1 To n
+        y(i, 1) = Range("B" & i)
+        xdata(i, 1) = Range("A" & i)
+    Next i
+    
+    If UserForm1.fxn1.Text <> "" Then
+        cc = cc + 1
+        flag1 = True
+        For i = 1 To n
+            fx1(i) = Application.Evaluate(Replace(UserForm1.fxn1.Text, "x", Range("A" & i)))
+            Range("C" & i) = fx1(i)
+        Next i
+    End If
+    
+    If UserForm1.fxn2.Text <> "" Then
+        cc = cc + 1
+        flag2 = True
+        For i = 1 To n
+            fx2(i) = Application.Evaluate(Replace(UserForm1.fxn2.Text, "x", Range("A" & i)))
+            Range("D" & i) = fx2(i)
+        Next i
+    End If
+    
+    If UserForm1.fxn3.Text <> "" Then
+        cc = cc + 1
+        flag3 = True
+        For i = 1 To n
+            fx3(i) = Application.Evaluate(Replace(UserForm1.fxn3.Text, "x", Range("A" & i)))
+            Range("E" & i) = fx3(i)
+        Next i
+    End If
+    
+    If UserForm1.fxn4.Text <> "" Then
+        cc = cc + 1
+        flag4 = True
+        For i = 1 To n
+            fx4(i) = Application.Evaluate(Replace(UserForm1.fxn4.Text, "x", Range("A" & i)))
+            Range("F" & i) = fx4(i)
+        Next i
+    End If
+    
+    ReDim x(n, cc + 1) As Variant
+    
+    If n < cc + 2 Then
+        MsgBox ("There are not at least (n+2) data points with n being the number of functions from the userform")
+        Range("C:F").ClearContents
+        Exit Sub
+    End If
+    
+    For i = 3 To 6
+        If Cells(1, i) = "" Then
+            Do
+                Columns(i).Select
+                Selection.Delete Shift:=xlToLeft
+                savior = savior + 1
+            Loop Until (Cells(1, i) <> "" Or savior > 4)
+        End If
+    Next i
+       
+    For i = 1 To n
+        x(i, 1) = 1
+        If Not Range("C1") = "" Then
+            x(i, 2) = Range("C" & i)
+            f1(i) = Range("C" & i)
+        End If
+        If Not Range("D1") = "" Then
+            x(i, 3) = Range("D" & i)
+            f2(i) = Range("D" & i)
+        End If
+        If Not Range("E1") = "" Then
+            x(i, 4) = Range("E" & i)
+            f3(i) = Range("E" & i)
+        End If
+        If Not Range("F1") = "" Then
+            x(i, 5) = Range("F" & i)
+            f4(i) = Range("F" & i)
+        End If
+    Next i
+    
+     
+    Xt = WorksheetFunction.Transpose(x)
+    XtX = WorksheetFunction.MMult(Xt, x)
+    XtX = WorksheetFunction.MInverse(XtX)
+    Xty = WorksheetFunction.MMult(Xt, y)
+    
+    
+    Betaa = WorksheetFunction.MMult(XtX, Xty)
+    Betaat = WorksheetFunction.Transpose(Betaa)
+    yp = WorksheetFunction.MMult(Betaat, Xt)
+    
+    
+    If cc = 1 Then
+        If flag1 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn1.Text)
+        ElseIf flag2 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn2.Text)
+        ElseIf flag3 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn3.Text)
+        ElseIf flag4 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn4.Text)
+        End If
+    
+    ElseIf cc = 2 Then
+        
+        If flag1 = True And flag2 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn1.Text & " + " & FormatNumber(Betaa(3, 1), 2) & "*" & UserForm1.fxn2.Text)
+        ElseIf flag1 = True And flag3 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn1.Text & " + " & FormatNumber(Betaa(3, 1), 2) & "*" & UserForm1.fxn3.Text)
+        ElseIf flag1 = True And flag4 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn1.Text & " + " & FormatNumber(Betaa(3, 1), 2) & "*" & UserForm1.fxn4.Text)
+        ElseIf flag2 = True And flag3 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn2.Text & " + " & FormatNumber(Betaa(3, 1), 2) & "*" & UserForm1.fxn3.Text)
+        ElseIf flag2 = True And flag4 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn2.Text & " + " & FormatNumber(Betaa(3, 1), 2) & "*" & UserForm1.fxn4.Text)
+        ElseIf flag3 = True And flag4 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn3.Text & " + " & FormatNumber(Betaa(3, 1), 2) & "*" & UserForm1.fxn4.Text)
+        End If
+                
+    ElseIf cc = 3 Then
+        
+        If flag1 = True And flag2 = True And flag3 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn1.Text & " + " & FormatNumber(Betaa(3, 1), 2) & "*" & UserForm1.fxn2.Text & " + " & _
+            FormatNumber(Betaa(4, 1), 2) & "*" & UserForm1.fxn3.Text)
+        ElseIf flag1 = True And flag2 = True And flag4 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn1.Text & " + " & FormatNumber(Betaa(3, 1), 2) & "*" & UserForm1.fxn2.Text & " + " & _
+            FormatNumber(Betaa(4, 1), 2) & "*" & UserForm1.fxn4.Text)
+        ElseIf flag2 = True And flag3 = True And flag4 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn2.Text & " + " & FormatNumber(Betaa(3, 1), 2) & "*" & UserForm1.fxn3.Text & " + " & _
+            FormatNumber(Betaa(4, 1), 2) & "*" & UserForm1.fxn4.Text)
+        ElseIf flag1 = True And flag3 = True And flag4 = True Then
+            MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+            & UserForm1.fxn1.Text & " + " & FormatNumber(Betaa(3, 1), 2) & "*" & UserForm1.fxn3.Text & " + " & _
+            FormatNumber(Betaa(4, 1), 2) & "*" & UserForm1.fxn4.Text)
+        End If
+        
+    ElseIf cc = 4 Then
+        
+        MsgBox ("Model is: y = " & FormatNumber(Betaa(1, 1), 2) & " + " & FormatNumber(Betaa(2, 1), 2) & "*" _
+        & UserForm1.fxn1.Text & " + " & FormatNumber(Betaa(3, 1), 2) & "*" & UserForm1.fxn2.Text & " + " & _
+        FormatNumber(Betaa(4, 1), 2) & "*" & UserForm1.fxn3.Text & " + " & FormatNumber(Betaa(5, 1), 2) & "*" & UserForm1.fxn4.Text)
+    
+    End If
+    
+    Ans = MsgBox("Would you like to plot the data?", vbYesNo)
+    If Ans = 6 Then
+        Call Plotting(xdata, y, yp)
+    End If
+
+    For i = 1 To n
+        SST = ((y(i, 1) - WorksheetFunction.Average(y)) ^ 2) + SST
+    Next i
+   
+    For i = 1 To n
+        residual(i, 1) = y(i, 1) - yp(i)
+        somaresidual = (residual(i, 1)) ^ 2 + somaresidual
+    Next i
+   
+   R2 = 1 - ((somaresidual / (n - cc)) / (SST / (n - 1)))
+   
+   
+   MsgBox ("The R square of the data is equal to " & FormatNumber(R2, 4))
+   
+   Sheets("Sheet1").Select
+    
+    For i = 3 To 6
+        Sheets("Sheet1").Columns(i).Select
+        Selection.ClearContents
+    Next i
+    
+    Unload UserForm1
+    
+    Exit Sub
+
+here:
+    
+    
+    MsgBox ("The formulas must be in excel syntax")
+
+End Sub
+
+Private Sub QuitButton_Click()
+Unload UserForm1
+End Sub
+
+Sub Plotting(xdata, y, yp)
+'PLACE YOUR CODE HERE
+'NOTICE THAT THIS IS A SUBROUTINE WITH ARGUMENTS
+'XDATA, YDATA, AND PREDICTIONS (YP) ARE PASSED THROUGH FROM ABOVE
+'IF YOU'D LIKE, YOU DON'T HAVE TO USE THIS "SUBCONTRACTING" OF THE PLOTTING TO
+'THIS SUBROUTINE; YOU CAN JUST PUT THE PLOTTING COMMANDS IN LIEU OF THE "CALL PLOTTING"
+'STATEMENT IN THE GOBUTTON_CLICK SUB ABOVE
+ ActiveSheet.Shapes.AddChart2(240, xlXYScatter).Select
+    Application.CutCopyMode = False
+    Application.CutCopyMode = False
+    Application.CutCopyMode = False
+    Application.CutCopyMode = False
+    ActiveChart.SeriesCollection.NewSeries
+    ActiveChart.FullSeriesCollection(1).Name = "=""Experimental data"""
+    ActiveChart.FullSeriesCollection(1).XValues = xdata
+    ActiveChart.FullSeriesCollection(1).Values = y
+    ActiveChart.SeriesCollection.NewSeries
+    ActiveChart.FullSeriesCollection(2).Name = "=""Model Prediction"""
+    ActiveChart.FullSeriesCollection(2).XValues = xdata
+    ActiveChart.FullSeriesCollection(2).Values = yp
+    'ActiveSheet.Shapes("Gráfico 12").ScaleWidth 1.2066666667, msoFalse, _
+        msoScaleFromBottomRight
+    'ActiveSheet.Shapes("Gráfico 12").ScaleHeight 1.2125, msoFalse, _
+        msoScaleFromBottomRight
+    ActiveChart.FullSeriesCollection(2).Select
+    With Selection.Format.Line
+        .Visible = msoTrue
+        .ForeColor.RGB = RGB(255, 0, 0)
+    End With
+    Selection.MarkerStyle = -4142
+    ActiveChart.SetElement (msoElementLegendRight)
+    ActiveChart.PlotArea.Select
+    Selection.Width = 304.97
+    ActiveChart.SetElement (msoElementPrimaryCategoryAxisTitleAdjacentToAxis)
+    ActiveChart.SetElement (msoElementPrimaryValueAxisTitleAdjacentToAxis)
+    'ActiveChart.Axes(xlValue, xlPrimary).AxisTitle.Text = "y"
+    Selection.Format.TextFrame2.TextRange.Characters.Text = "y"
+    With Selection.Format.TextFrame2.TextRange.Characters(1, 1).ParagraphFormat
+        .TextDirection = msoTextDirectionLeftToRight
+        .Alignment = msoAlignCenter
+    End With
+    With Selection.Format.TextFrame2.TextRange.Characters(1, 1).Font
+        .BaselineOffset = 0
+        .Bold = msoFalse
+        .NameComplexScript = "+mn-cs"
+        .NameFarEast = "+mn-ea"
+        .Fill.Visible = msoTrue
+        .Fill.ForeColor.RGB = RGB(89, 89, 89)
+        .Fill.Transparency = 0
+        .Fill.Solid
+        .Size = 10
+        .Italic = msoFalse
+        .Kerning = 12
+        .Name = "+mn-lt"
+        .UnderlineStyle = msoNoUnderline
+        .Strike = msoNoStrike
+    End With
+    ActiveChart.Axes(xlCategory).AxisTitle.Select
+    'ActiveChart.Axes(xlValue, xlPrimary).AxisTitle.Text = "x"
+    Selection.Format.TextFrame2.TextRange.Characters.Text = "x"
+    With Selection.Format.TextFrame2.TextRange.Characters(1, 1).ParagraphFormat
+        .TextDirection = msoTextDirectionLeftToRight
+        .Alignment = msoAlignCenter
+    End With
+    With Selection.Format.TextFrame2.TextRange.Characters(1, 1).Font
+        .BaselineOffset = 0
+        .Bold = msoFalse
+        .NameComplexScript = "+mn-cs"
+        .NameFarEast = "+mn-ea"
+        .Fill.Visible = msoTrue
+        .Fill.ForeColor.RGB = RGB(89, 89, 89)
+        .Fill.Transparency = 0
+        .Fill.Solid
+        .Size = 10
+        .Italic = msoFalse
+        .Kerning = 12
+        .Name = "+mn-lt"
+        .UnderlineStyle = msoNoUnderline
+        .Strike = msoNoStrike
+    End With
+    ActiveChart.ChartArea.Select
+    'ActiveSheet.Shapes("Gráfico 12").ScaleHeight 1.067583047, msoFalse, _
+        msoScaleFromTopLeft
+    ActiveChart.PlotArea.Select
+    Selection.Height = 236.09
+    Selection.Width = 298.97
+    Selection.Left = 29.969
+    ActiveChart.Legend.Select
+    Selection.Position = xlTop
+    ActiveChart.Location Where:=xlLocationAsNewSheet
+    ActiveChart.SetElement (msoElementPrimaryCategoryAxisTitleNone)
+    ActiveChart.SetElement (msoElementPrimaryValueAxisTitleNone)
+    ActiveChart.SetElement (msoElementChartTitleNone)
+    ActiveChart.ChartArea.Select
+    ActiveChart.PlotArea.Select
+    'ActiveChart.FullSeriesCollection(3).Delete
+End Sub
+
+Private Sub UserForm_Click()
+
+End Sub
