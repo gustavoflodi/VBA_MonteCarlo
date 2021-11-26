@@ -1,0 +1,200 @@
+Option Explicit
+Option Base 1
+
+Private Sub GoButton_Click()
+
+'   THE FOLLOWING DIM STATEMENTS ARE FOR VARIABLES INVOLVED
+'   IN THE HISTOGRAM PLOTTING CODE THAT I PROVIDE - DON'T DELETE!
+
+Dim datamin As Double, datamax As Double, datarange As Double
+Dim lowbins As Integer, highbins As Integer, nbins As Double
+Dim binrangeinit As Double, binrangefinal As Double
+Dim bins() As Double, bincenters() As Double, j As Integer
+Dim c As Integer, i As Integer, R() As Double
+Dim bincounts() As Integer, ChartRange As String, nr As Integer
+
+
+Dim alpha As Double, beta As Double, chance As Double, count As Double, alpha1 As Double, beta1 As Double
+ReDim R(nsimulations) As Double
+On Error Resume Next
+Application.DisplayAlerts = False
+Sheets("Main").Select
+
+Dim tWB As Workbook
+Set tWB = ThisWorkbook
+tWB.Activate
+
+For i = 1 To MainForm.nsimulations
+    chance = Rnd
+    
+    If chance < MainForm.cLandpercent1 * 1 / 100 Then
+        Range("B3") = -5
+    ElseIf chance < (MainForm.cLandpercent2 * 1 + MainForm.cLandpercent1 * 1) / 100 Then
+        Range("B3") = -10
+    Else
+        Range("B3") = -20
+    End If
+    chance = Rnd
+    alpha = (4 * MainForm.cRoyaltMode + MainForm.cRoyaltHigh - 5 * MainForm.cRoyaltLow) / (MainForm.cRoyaltHigh - MainForm.cRoyaltLow)
+    beta = (5 * MainForm.cRoyaltHigh - MainForm.cRoyaltLow - 4 * MainForm.cRoyaltMode) / (MainForm.cRoyaltHigh - MainForm.cRoyaltLow)
+    Range("B4") = -WorksheetFunction.Beta_Inv(chance, alpha, beta, -1 * MainForm.cRoyaltLow, -1 * MainForm.cRoyaltHigh)
+    
+    chance = Rnd
+    Range("B5") = WorksheetFunction.Norm_Inv(Rnd, MainForm.TBDAve, MainForm.TBDstdev)
+    
+    chance = Rnd
+    Range("B6") = Rnd * (MainForm.cWCmax - MainForm.cWCmin) + MainForm.cWCmin
+    
+    chance = Rnd
+    Range("B7") = WorksheetFunction.Norm_Inv(Rnd, MainForm.cSUPAve * 1, MainForm.cSUPstdev * 1)
+    
+    chance = Rnd
+    alpha1 = (4 * MainForm.SRmode + MainForm.SRhigh - 5 * MainForm.SRlow) / (MainForm.SRhigh - MainForm.SRlow)
+    beta1 = (5 * MainForm.SRhigh - MainForm.SRlow - 4 * MainForm.SRmode) / (MainForm.SRhigh - MainForm.SRlow)
+    Range("E3") = WorksheetFunction.Beta_Inv(chance, alpha1, beta1, MainForm.SRlow, MainForm.SRhigh)
+    
+     chance = Rnd
+'    If chance <= (MainForm.PCmode - MainForm.PClow) / (MainForm.PChigh - MainForm.PClow) Then
+'        Range("H3") = -(chance ^ 2 - 2 * chance * MainForm.PClow + MainForm.PClow ^ 2) / ((MainForm.PCmode - MainForm.PClow) * (MainForm.PChigh - MainForm.PClow))
+'    Else
+'        Range("H3") = 1 - (((chance - MainForm.PChigh) ^ 2) / ((MainForm.PChigh - MainForm.PClow) * (MainForm.PChigh * MainForm.PCmode)))
+'    End If
+    Range("H3") = -triangular_inverse(chance, -1 * MainForm.PClow, -1 * MainForm.PCmode, -1 * MainForm.PChigh)
+    
+    
+    chance = Rnd
+    If chance < MainForm.taxp1 / 100 Then
+        Range("E4") = (MainForm.trate1 * 1) / 100
+    ElseIf chance < (MainForm.taxp1 + MainForm.taxp2) / 100 Then
+        Range("E4") = (MainForm.trate2 * 1) / 100
+    End If
+    
+    chance = Rnd
+    Range("H4") = chance * (MainForm.IRmax / 100 - MainForm.IRmin / 100) + MainForm.IRmin / 100
+    
+    R(i) = Range("N24")
+    
+    If Range("N24") > 0 Then
+        count = count + 1
+    End If
+Next i
+
+MsgBox (count / nsimulations * 100 & "%" & " of the simulations were profitable")
+
+'---------------------
+
+'   PLACE THE MAIN BULK OF YOUR CODE HERE.
+'   IN ORDER FOR THE HISTOGRAM CODE BELOW (THAT I PROVIDE)
+'   TO WORK PROPERLY, THE RESULT OF THIS PART OF THE
+'   SUBROUTINE SHOULD CREATE A VECTOR R THAT IS COMPOSED OF
+'   THE END RESULT (PROFIT PER COOKIE IN THE EXAMPLE I SHOW)
+'   FOR EACH OF THE SIMULATIONS.  FOR EXAMPLE, IF 1,000 SIMULATIONS
+'   WERE PERFORMED, THE SIZE OF R WOULD BE 1000 (COLUMN VECTOR).
+
+
+
+'----------------------
+
+'   DO NOT MODIFY THE CODE BELOW!  ONCE A VECTOR R OF RESULTS HAS BEEN CREATED,
+'   THE CODE BELOW WILL CREATE A HISTOGRAM.  MAKE SURE NOT TO DELETE OR CHANGE
+'   THE NAME OF THE "HISTOGRAM DATA" WORKSHEET IN THIS FILE!
+
+'   The code below creates a histogram of the vector R that you should create above
+'   R is a vector of the end result of each simulation (profit per cookie in this case)
+
+datamin = WorksheetFunction.Min(R)
+datamax = WorksheetFunction.Max(R)
+datarange = datamax - datamin
+lowbins = Int(WorksheetFunction.Log(nsimulations, 2)) + 1
+highbins = Int(Sqr(nsimulations))
+nbins = (lowbins + highbins) / 2
+binrangeinit = datarange / nbins
+ReDim bins(1) As Double
+If binrangeinit < 1 Then
+    c = 1
+    Do
+        If 10 * binrangeinit > 1 Then
+            binrangefinal = 10 * binrangeinit Mod 10
+            Exit Do
+        Else
+            binrangeinit = 10 * binrangeinit
+            c = c + 1
+        End If
+    Loop
+    binrangefinal = binrangefinal / 10 ^ c
+ElseIf binrangeinit < 10 Then
+    binrangefinal = binrangeinit Mod 10
+Else
+    c = 1
+    Do
+        If binrangeinit / 10 < 10 Then
+            binrangefinal = binrangeinit / 10 Mod 10
+            Exit Do
+        Else
+            binrangeinit = binrangeinit / 10
+            c = c + 1
+        End If
+    Loop
+    binrangefinal = binrangefinal * 10 ^ c
+End If
+i = 1
+bins(1) = (datamin - ((datamin) - (binrangefinal * Fix(datamin / binrangefinal))))
+Do
+    i = i + 1
+    ReDim Preserve bins(i) As Double
+    bins(i) = bins(i - 1) + binrangefinal
+Loop Until bins(i) > datamax
+nbins = i
+ReDim Preserve bincounts(nbins - 1) As Integer
+ReDim Preserve bincenters(nbins - 1) As Double
+For j = 1 To nbins - 1
+    c = 0
+    For i = 1 To nsimulations
+        If R(i) > bins(j) And R(i) <= bins(j + 1) Then
+            c = c + 1
+        End If
+    Next i
+    bincounts(j) = c
+    bincenters(j) = (bins(j) + bins(j + 1)) / 2
+Next j
+Sheets("Histogram Data").Select
+Cells.Clear
+Range("A1").Select
+Range("A1:A" & nbins - 1) = WorksheetFunction.Transpose(bincenters)
+Range("B1:B" & nbins - 1) = WorksheetFunction.Transpose(bincounts)
+MainForm.Hide
+Application.ScreenUpdating = False
+Charts("Histogram").Delete
+ActiveCell.Range("A1:B1").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    nr = Selection.Rows.count
+    ChartRange = Selection.Address
+    ActiveSheet.Shapes.AddChart2(201, xlColumnClustered).Select
+    ActiveChart.SetSourceData Source:=Range("'Histogram Data'!" & ChartRange)
+    ActiveChart.ChartTitle.Select
+    Selection.Delete
+    ActiveChart.PlotArea.Select
+    Application.CutCopyMode = False
+    ActiveChart.FullSeriesCollection(1).Delete
+    Application.CutCopyMode = False
+    Application.CutCopyMode = False
+    ActiveChart.FullSeriesCollection(1).XValues = "='Histogram Data'!" & "$A$1:$A$" & nr
+    ActiveChart.Legend.Select
+    Selection.Delete
+    ActiveChart.SetElement (msoElementPrimaryCategoryAxisTitleAdjacentToAxis)
+    ActiveChart.SetElement (msoElementPrimaryValueAxisTitleAdjacentToAxis)
+    Selection.Caption = "Count"
+    ActiveChart.Axes(xlCategory).AxisTitle.Select
+    Selection.Caption = "Bin Center"
+    ActiveChart.ChartArea.Select
+    ActiveChart.Location Where:=xlLocationAsNewSheet, Name:="Histogram"
+    
+'------------------
+'   FEEL FREE TO ADD CODE BELOW THIS POINT, E.G. TO OUTPUT A SUMMARY OF THE RESULTS IN MESSAGE BOX(ES)
+
+End Sub
+
+Private Sub QuitButton_Click()
+Unload MainForm
+End Sub
+
